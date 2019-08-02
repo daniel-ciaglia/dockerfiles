@@ -1,10 +1,27 @@
 version: '3.6'
 
+# clean volumes: docker volume ls | grep -i local | gsed -e 's/^.*\(docker-.*\)$/\1/g' | xargs -J % docker volume rm %
 volumes:
   db:
+    driver_opts:
+      type: none
+      device: ${PWD}/my_data/db
+      o: bind
   storage:
+    driver_opts:
+      type: none
+      device: ${PWD}/my_data/storage
+      o: bind
   logo:
+    driver_opts:
+      type: none
+      device: ${PWD}/my_data/logo
+      o: bind
   public:
+    driver_opts:
+      type: none
+      device: ${PWD}/my_data/public
+      o: bind
 
 # uncomment if you want to use external network (example network: "web")
 #networks:
@@ -36,6 +53,8 @@ services:
 
   web:
     image: nginx:1
+    depends_on:
+      - app
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       -  storage:/var/www/app/storage
@@ -49,22 +68,22 @@ services:
 #      - web        # uncomment if you want to use  external network (reverse proxy for example)
       - default
 
-  cron:
-    image: invoiceninja/invoiceninja
-    env_file: .env
-    volumes:
-      -  storage:/var/www/app/storage
-      -  logo:/var/www/app/public/logo
-      -  public:/var/www/app/public
-    entrypoint: |
-      bash -c 'bash -s <<EOF
-      trap "break;exit" SIGHUP SIGINT SIGTERM
-      sleep 300s
-      while /bin/true; do
-        ./artisan ninja:send-invoices
-        ./artisan ninja:send-reminders
-        sleep 1d
-      done
-      EOF'
-    networks:
-      - default
+  # cron:
+  #   image: invoiceninja/invoiceninja
+  #   env_file: .env
+  #   volumes:
+  #     -  storage:/var/www/app/storage
+  #     -  logo:/var/www/app/public/logo
+  #     -  public:/var/www/app/public
+  #   entrypoint: |
+  #     bash -c 'bash -s <<EOF
+  #     trap "break;exit" SIGHUP SIGINT SIGTERM
+  #     sleep 300s
+  #     while /bin/true; do
+  #       ./artisan ninja:send-invoices
+  #       ./artisan ninja:send-reminders
+  #       sleep 1d
+  #     done
+  #     EOF'
+  #   networks:
+  #     - default
