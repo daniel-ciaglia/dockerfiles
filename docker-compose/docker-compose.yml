@@ -39,7 +39,7 @@ services:
       - default
 
   app:
-    image: invoiceninja/invoiceninja
+    image: invoiceninja/invoiceninja:4.5.18
     env_file: .env
     restart: always
     depends_on:
