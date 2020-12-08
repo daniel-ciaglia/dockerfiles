@@ -1,53 +1,25 @@
 version: '3.6'
-
 # clean volumes: docker volume ls | grep -i local | gsed -e 's/^.*\(docker-.*\)$/\1/g' | xargs -J % docker volume rm %
-volumes:
-  db:
-    driver_opts:
-      type: none
-      device: ${PWD}/my_data/db
-      o: bind
-  storage:
-    driver_opts:
-      type: none
-      device: ${PWD}/my_data/storage
-      o: bind
-  logo:
-    driver_opts:
-      type: none
-      device: ${PWD}/my_data/logo
-      o: bind
-  public:
-    driver_opts:
-      type: none
-      device: ${PWD}/my_data/public
-      o: bind
-
-# uncomment if you want to use external network (example network: "web")
-#networks:
-#  web:
-#    external: true
-
 services:
   db:
     image: mysql:5
     env_file: .env
     restart: always
     volumes:
-      - db:/var/lib/mysql
+      - ${PWD}/my_data/db:/var/lib/mysql:rw,delegated
     networks:
       - default
 
   app:
-    image: invoiceninja/invoiceninja:4.5.18
+    image: invoiceninja/invoiceninja:alpine-4.5.22
     env_file: .env
     restart: always
     depends_on:
       - db
     volumes:
-      -  storage:/var/www/app/storage
-      -  logo:/var/www/app/public/logo
-      -  public:/var/www/app/public
+      -  ${PWD}/my_data/storage:/var/www/app/storage:rw,delegated
+      -  ${PWD}/my_data/logo:/var/www/app/public/logo:rw,delegated
+      -  ${PWD}/my_data/public:/var/www/app/public:rw,delegated
     networks: 
       - default  
 
@@ -57,35 +29,12 @@ services:
       - app
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      -  storage:/var/www/app/storage
-      -  logo:/var/www/app/public/logo
-      -  public:/var/www/app/public
-    expose: # Expose ports without publishing them to the host machine - they’ll only be accessible to linked services.
-      - "80"
+      -  ${PWD}/my_data/storage:/var/www/app/storage:rw,delegated
+      -  ${PWD}/my_data/logo:/var/www/app/public/logo:rw,delegated
+      -  ${PWD}/my_data/public:/var/www/app/public:rw,delegated
     depends_on:
       - app
-    ports: # Delete if you want to use reverse proxy
+    ports:
       - 8000:80
     networks:
-#      - web        # uncomment if you want to use  external network (reverse proxy for example)
       - default
-
-  # cron:
-  #   image: invoiceninja/invoiceninja
-  #   env_file: .env
-  #   volumes:
-  #     -  storage:/var/www/app/storage
-  #     -  logo:/var/www/app/public/logo
-  #     -  public:/var/www/app/public
-  #   entrypoint: |
-  #     bash -c 'bash -s <<EOF
-  #     trap "break;exit" SIGHUP SIGINT SIGTERM
-  #     sleep 300s
-  #     while /bin/true; do
-  #       ./artisan ninja:send-invoices
-  #       ./artisan ninja:send-reminders
-  #       sleep 1d
-  #     done
-  #     EOF'
-  #   networks:
-  #     - default
